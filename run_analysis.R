@@ -1,19 +1,18 @@
 ## author   : lars.pijnappel@gmail.com
-## date     : 14 August 2016
+## date     : 17 August 2016
 
 
 #### step 1 - Initialisation ####
 rm(list=ls())
 
 ## Due to data sizes, package `data.table` comes to the rescue when importing and handling the data sets. 
-## And what would we do without the `dplyr` and 'tidyr' package...
+## And what would we do without the `dplyr` package...
 
 library(data.table)
 ## find the data.table cheat sheet at
 ## https://www.r-bloggers.com/the-data-table-cheat-sheet/
 
 library(dplyr)
-library(tidyr)
 ## find the dplyr & tidyr data wrangling cheat sheet at 
 ## https://www.rstudio.com/wp-content/uploads/2015/02/data-wrangling-cheatsheet.pdf
 
@@ -171,29 +170,29 @@ DT_all <- DT_all[DT_activity]
 ### place activity_id + activity before the rest
 DT_all <- select( DT_all, subject, starts_with('activity'), everything() )
 # as.data.table( names(DT_all) )
-## remove the obsolete activity_id, as the activity labels are included in the data set
-DT_all[, activity_id := NULL ]
-# as.data.table( names(DT_all) )
+# ## remove the obsolete activity_id, as the activity labels are included in the data set
+# DT_all[, activity_id := NULL ]
+# # as.data.table( names(DT_all) )
 
 ## 4.3 rename the 'feature' variables
 ## /!\ beware that the list of features contain duplicate names.
 ## /!\ mapping these features onto the 561 variables results in duplicate variable names of the data.table ..
-setnames( DT_all, 3:563, c(DT_features$V2) )
+setnames( DT_all, 4:564, c(DT_features$V2) )
 # as.data.table( names(DT_all) )
-
 
 
 #### step 5 - Create & Export Tidy Data Set ####
 
 ## steps performed:
-## 1. determine feature variables to be included in the tidy data set (see requirement #2 of the project assignment)
-## 2. create DT_tidy, which matches the project assignment requirement #2 and # 5
-## 3. tidy this dataset into a 'long form'
-## 4. export to TXT file
+## 1. determine feature variables to be included in the tidy data set
+## 2. create DT_tidy, which matches the project assignment requirements:
+##    - #2 Extracts only the measurements on the mean and standard deviation for each measurement.
+##    - #5 Create [..] a tidy data set with the average of each variable for each activity and each subject
+## 3. export to a TXT file
 
 ## 1. first determine which variables from DT_all need to be included in the final dataset DT_tidy
 ## According to requirement 2 of the project assignment:
-## - "Extract only the measurements on the mean and standard deviation for each measurement."
+## - "Extract only the measurem ents on the mean and standard deviation for each measurement."
 ## do this by searching the DT_features list for feature variables containing 'mean()' or 'std()'
 feat_var <- DT_features[ grep( "mean\\(\\)|std\\(\\)" , DT_features$V2 ) ]
 # ## as the feature list contains duplicate values, doublecheck if that's not the case for the found values.
@@ -217,27 +216,14 @@ dim(DT_tidy)
 ## NROW = 180   > 30 subjects, each having 6 activities
 ## NCOL = 68    > 66 feat_var (matching the feature requirements) + 1 subject + 1 activity
 
-## 3. tidy the data set into a long form where 
-## each row is an observation for a specific combination of activity + subject + feature
-## the gather() function change the class to data.frame. For usability, this is changed to a tbl_df class.
-tdf_tidy <- tbl_df( gather( DT_tidy, 'feat_name', 'feat_avg', 3:68 ) )
-dim(tdf_tidy)
-## 66 features for each subject+activity combination (i.e. 30 subjects each having 6 activities)
-## gathering these 66 features results in 11880 rows, where each activity-subject-feat_name is an observation 
-## containing the average for that specific feature of the subject's activity.
-
-## sort the tidied data set and export the results
-tdf_tidy <- tdf_tidy %>% arrange( activity, subject, feat_name )
-
-## 4. export the final data set DT_tidy to a text file for upload to the Coursera site.
-# write.table( DT_tidy, file = paste( dir_project, "DT_tidy-step5.txt", sep = '/'), row.names = F)
-write.table( tdf_tidy, file = paste( dir_project, "tdf_tidy-step5.txt", sep = '/'), row.names = F)
+## 3. export the final data set DT_tidy to a text file for upload to the Coursera site.
+write.table( DT_tidy, file = paste( dir_project, "DT_tidy-step5.txt", sep = '/'), row.names = F)
 
 
 #####################################################################
 
-tdf_import <- read.table( paste( dir_project, "tdf_tidy-step5.txt", sep = '/'), header = T, stringsAsFactors = F ) %>% tbl_df()
-all.equal( tdf_tidy, tdf_import )
+DT_import <- fread( paste( dir_project, "DT_tidy-step5.txt", sep = '/') )
+all.equal( DT_tidy, DT_import )
 
 #####################################################################
 
