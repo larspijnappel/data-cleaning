@@ -180,6 +180,8 @@ DT_all <- select( DT_all, subject, starts_with('activity'), everything() )
 setnames( DT_all, 4:564, c(DT_features$V2) )
 # as.data.table( names(DT_all) )
 
+## show number of observations for each activity-subject combination:
+table( DT_all$activity, DT_all$subject)
 
 #### step 5 - Create & Export Tidy Data Set ####
 
@@ -197,7 +199,7 @@ setnames( DT_all, 4:564, c(DT_features$V2) )
 feat_var <- DT_features[ grep( "mean\\(\\)|std\\(\\)" , DT_features$V2 ) ]
 # ## as the feature list contains duplicate values, doublecheck if that's not the case for the found values.
 # table(duplicated( feat_var ))     ## No duplicates found: there are 66 unique variable names
-feat_var <- unlist( c(feat_var) )   ## convert feat_var into a character class so that .SDcols can handle it properly
+feat_var <- as.character( feat_var$V2 )   ## convert feat_var into a character class so that .SDcols can handle it properly
 ## these selected feature values become the new variable names in the DT_final set
 
 ## 2. create DT_tidy
@@ -209,45 +211,38 @@ feat_var <- unlist( c(feat_var) )   ## convert feat_var into a character class s
 ## - lapply(.SD, mean)            > calculate the mean for each column (except the one specified in by).
 ## - by = .(activity, subject)    > group j by column activity and subject, then calculate j
 ## - .SDcols = feat_var           > specifies the columns on which to act on
-DT_tidy <- DT_all[ ,lapply(.SD, mean), by = .(activity, subject), .SDcols = feat_var ]
+DT_tidy_A <- DT_all[ ,lapply(.SD, mean), by = .(activity, subject), .SDcols = feat_var ]
 
 ## first check by means of dimensions:
-dim(DT_tidy)
+dim(DT_tidy_A)
 ## NROW = 180   > 30 subjects, each having 6 activities
 ## NCOL = 68    > 66 feat_var (matching the feature requirements) + 1 subject + 1 activity
 
 ## 3. export the final data set DT_tidy to a text file for upload to the Coursera site.
-write.table( DT_tidy, file = paste( dir_project, "DT_tidy-step5.txt", sep = '/'), row.names = F)
+write.table( DT_tidy_A, file = paste( dir_project, "DT_tidy_A.txt", sep = '/'), row.names = F)
+
+# #####################################################################
+# ## from the just created 'option A' data set (i.e. wide form), 
+# ## transform it into an 'option C' tidy dataset (long form).
+# ## see also
+# ## https://www.coursera.org/learn/data-cleaning/discussions/all/threads/-Cjtsip5Eea0DRLrrvCCTQ
+# #####################################################################
+# 
+# ## reshape the (wide shape) DT_tidy set into a (narrow shaped) tdf_tidy, 
+# ## by gathering all feature-related columns and their corresponding values into 
+# ## two columns: feat_name and feat_value
+# library(tidyr)
+# DT_tidy_C <- data.table( gather( DT_tidy_A, 'feat_name', 'feat_value', 3:68 ) )
+# 
+# dim( DT_tidy_C )
+# ## 66 features for each subject+activity combination (i.e. 30 subjects each having 6 activities)
+# ## gathering these 66 features results in 11880 rows, where each activity-subject-feat_name is an observation 
+# ## containing the average for that specific feature of the subject's activity.
 
 
-#####################################################################
-
-DT_import <- fread( paste( dir_project, "DT_tidy-step5.txt", sep = '/') )
-all.equal( DT_tidy, DT_import )
-
-#####################################################################
-
-# library(stringr)
-# ## determine unique feature labels (skip first 2 variables activity + subject )
-# ## 
-# names( DT_tidy )
-# x <- str_split( names( DT_tidy )[-(1:2)], "(-(X|Y|Z))")     ## split names by '-X or -Y or -Z'
-# unique( as.matrix( lapply( x, head, 1) ) )
-
-
-
-## reshape the (wide shape) DT_tidy set into a (narrow shaped) tdf_tidy, 
-## by gathering all feature-related columns and their corresponding values into 
-## two columns: feat_name and feat_value
-
-library(tidyr)
-tdf_tidy <- tbl_df( gather( DT_tidy, 'feat_name', 'feat_value', 3:68 ) )
-dim(tdf_tidy)
-## 66 features for each subject+activity combination (i.e. 30 subjects each having 6 activities)
-## gathering these 66 features results in 11880 rows, where each activity-subject-feat_name is an observation 
-## containing the average for that specific feature of the subject's activity.
-
-## sort the tidied data set and export the results
-tdf_tidy %>% arrange( activity, subject, feat_name )
-
-# tdf_tidy %>% group_by( activity, subject ) %>% summarise( feat_cnt = n() )
+# #####################################################################
+# 
+# DT_import <- fread( paste( dir_project, "DT_tidy_A", sep = '/') )
+# all.equal( DT_tidy_A, DT_import )
+# 
+# #####################################################################
